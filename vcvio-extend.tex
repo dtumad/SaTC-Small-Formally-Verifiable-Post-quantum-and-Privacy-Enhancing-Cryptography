@@ -1,0 +1,60 @@
+\section{Framework Extensions}
+
+In order to enhance the usability of the \vcvio framework by other crypgtographers, and its applicability to the postquantum and privacy-enhancing cryptographic constructions investigated in the next sections, we will need to introduce several additional elements to the framework. 
+First, we will introduce a library of program structures, lemmas, and proof tactics designed to support the argument style used in modern cryptographic security proofs, especially the ``game hopping'' proof strategy.  
+Second, we will introduce methods to model ``proofs of knowledge,'' a common element used in modern cryptographic protocols, that are usually proven secure using rewinding lemmas.
+Finally, we will introduce \vcvio structures to represent the hard lattice-based problems that form the basis for both homomorphic encryption schemes and many proposed post-quantum cryptosystems, along with structures to represent the homomorphic properties of these problems.
+
+\subsection{Game Hopping} \label{sec:games}
+
+(GAME HOPPING FIGURE: 4 HOPS)
+
+Many cryptographic security proofs use the so-called ``game hopping'' or ``sequence of games'' argument strategy.
+In this framework, the proof starts with a security experiment that defines the requirements for a protocol or primitive.
+The proof then defines a sequence of modifications to this experiment, successive probabilistic ``games,'' along with arguments that the output distribution of successive pairs must be small, e.g. bounded by some concrete event probability or leading to a reduction to some hard problem, as shown in Figure~\ref{fig:game}.
+The final game in the sequence has an easily characterized output distribution, for example, succeeding with probability $\frac{1}{2}$ or $\frac{1}{|X|}$ for some large set $X$.
+Bellare and Rogaway~\cite{bellare2006security}, Shoup~\cite{shoup2004sequences}, and Halevi~\cite{halevi2005plausible} have all written tutorials in this style, along with a variety of useful lemmas about the types of game steps, and suggestions that this structure could be the basis of tools for formal verification of proofs.
+
+In \vcvio a game is essentially an instance of a \lean{SecExp} structure, where the \lean{SimOracle} structures used in simulating an adversary are successively modified.  
+For example, Game (X FIXME) as shown in Figure~\ref{fig:game} could be implemented from Game (X-1 FIXME) using LEAN THING. 
+The project will implement the lemmas proposed in previous works~\cite{bellare2006security,shoup2004sequences,halevi2005plausible}, so they are available for use by other cryptographers.
+Furthermore, the project will implement meta-tactics related to the range of intermediate game steps used in these works. 
+
+Throughout the project, the application of these tools to implement the security proofs in other phases of the project will serve as an iterative evaluation process.
+If a game-hopping proof is required and can be completed using the mechanisms implemented in this phase, then the proof is a demonstration of the expressiveness of the existing library.
+On the other hand, if in another phase of the project a game-hopping proof step cannot be easily expressed using the existing tools, then we will attempt to identify an opportunity to generalize the library further with additional lemmas or proof tactics.
+
+\subsection{Proofs of Knowledge} \label{sec:pok}
+
+A wide variety of modern cryptographic algorithms, for example ring signatures, anonymous credentials, contact tracing, and many cryptocurrencies, are based on noninteractive proofs (or arguments) of knowledge, or PoKs.  These typically serve to show that some value in a protocol is properly constructed or could only be produced by someone with access to a secret; flawed PoK protocols can lead to extreme security failures, e.g. the Plonk cryptocurrency was shown to be vulnerable to arbitrary forgeries due to an incorrect argument of knowledge implementation.
+
+The common way to construct a PoK is by constructing a $\Sigma$-protocol for a hard relation $R(x,w)$, which consists of a pair of {\em prover} functions \lean{cmt, prv}, a {\em verifier} function \lean{ver}, a {\em challenge} space \lean{Chal}, a {\em simulator} function \lean{sim}, and an {\em extractor} function \lean{ext}.  
+The $\Sigma$-protocol is {\em complete} if for every \lean{c : Chal}, \lean{ver x (prv x w (cmt x w) c) = True}; 
+it is {\em zero-knowledge} if \lean{sim x} is computationally indistinguishable from \lean{prv x w (cmt x w) c} for uniformly chosen \lean{c : Chal}; 
+and it has ``special soundness'' if, when \lean{cmt <- (cmt x w)} we have $R(x,\lean{ext (prv x w cmt c1) (prv x w cmt c2)})$, that is, given the output of \lean{prv} for the same committed value \lean{cmt} and two different challenge values \lean{c1 c2 : Chal}, \lean{ext} can produce a witness for $x$.  
+The PoK is created from the $\Sigma$-protocol by the Fiat-Shamir heuristic of computing a challenge based on the output of a random oracle applied to \lean{(x, (cmt x w))}.  
+
+Many $\Sigma$-protocols are constructed as conjunctions and disjunctions of $\Sigma$ protocols for simpler languages, using techniques introduced by Camenisch and Stadler~\cite{camenisch1997proof}.  
+Camenisch and Stadler also introduced the most prevalent notation for protocols constructed in this manner, e.g $PK(w_1,w_2)\{ R_1(x,w_1) \land R_2(x,w_2)\}$, indicating a proof of knowledge that $(x,w_1)$ satisfy some property and $(x,w_2)$ satisfy some other property.
+
+The project will extend the \vcvio shallow embedding to incorporate a version of the Camenisch-Stadler "proof of knowledge" notation and composition techniques, allowing us and other developers to specify and instantiate composed proof of knowledge primitives from simpler primitives.  The resulting structures will both allow formally verifiable proofs of correctness and security based on the underlying primitives and (non-performant) formally-verified correct implementations.  
+
+We can model a basic $\Sigma$-protocol as a Lean structure specifying the computations and types mentioned above, where the relation \lean{rel} is simply a predicate \lean{rel : X -> W -> Bool}, the field \lean{Chal : Type}, and the various algorithms are instances of \lean{OracleComp} for the appropriate oracle specification and input and output types.  
+The project will use metaprogramming facilities in Lean to allow the specification of compound PoKs using a Camenisch-Stadler like notation.
+We note that proving the security of cryptographic algorithms based on PoKs implicitly requires the use of rewinding techniques, so producing complete, formally verifiable security and correctness proofs of such algorithms is beyond the expressive ability of previous foundational systems.
+
+As noted in section~\ref{sec:games}, the abstractions and artifact produced in this phase of the project can be subject to an iterative evaluation process.  The project will apply these tools in other phases of the project, for example in proving the security of a particular cryptographic algorithm.  If the resulting formal proof is successful and closely resembles the structure of the ``on paper'' proof, this serves as evidence of a successful implementation.  If the notational tools are not sufficient, then this will serve as an opportunity to revisit and expand the library of available PoKs and related meta-programs.
+
+\subsection{Homomorphic primitives}
+\label{sec:lattice}
+In the past 15 years, many new cryptographic algorithms have been proposed based on hard lattice problems.  
+These include many variants of the Learning with Errors (LWE) problem (Ring, Module, Rounding, Decision) and the Short Integer Solution (SIS) problem.  
+Some interesting aspects of these problems is that compared to problems like discrete logarithm or integer factoring, they do not have unique solutions; they have a wider variety of parameters, including (potentially multiple) noise distributions, integer and polynomial moduli, and degrees and dimensions; they can lead to encryption or signing algorithms that produce errors; and the problem instances have useful algebraic structures.  
+This in turn has led to interesting new primitives, such as the BGV~\cite{bgv} and CKKS~\cite{ckks} ``leveled homomorphic encryption'' schemes, which  form the basis of a variety of privacy-preserving protocols~\cite{,,} FIXME and post-quantum cryptosystems.
+
+To produce formally verifiable proofs of the correctness and security of schemes based on these problems, the project will introduce new Lean structures based on the \lean{OracleAlg} and \lean{SimOracle} types, which model the diversity of hard problems in this space.
+The project will investigate and design \lean{SecExp} variants in \vcvio that express the security problems related to these primitives.  
+The use of non-uniform distributions such as the discrete gaussian distribution, and the need for unusual algebraic structures will be notable challenges.
+However, we expect that much of the needed analytical tools can be adapated from the Lean MathLib project.
+
+% More details

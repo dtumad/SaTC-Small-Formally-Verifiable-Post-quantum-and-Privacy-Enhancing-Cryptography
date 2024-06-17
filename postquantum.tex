@@ -1,0 +1,68 @@
+\section{Postquantum cryptosystems}\label{sec:pq}
+
+The NIST PQCRYPTO competition selected several algorithms for standardization as post-quantum cryptographic primitives.  While all of the selected algorithms have security proofs based on reductions to hard problems such as the short integer solutions problem, the module learning with errors problem and the security of cryptographic hash functions, the security proofs can be quite involved, and throughout the process of the competition several subtle errors in the proofs of the constructions have been identified and fixed.  
+It would be ideal if we had formally-verifiable proofs of the security of these constructions, but since the proofs involve the random oracle model and typically involve adversaries with access to multiple oracle types, such proofs are out of reach of existing frameworks.  
+Because \vcvio was designed to handle such obstacles, the project will aim to produce the first formally-verified security proofs for the SPHINCS+, Falcon, and Dilithium signature schemes.  
+
+%ML-KEM: MAYBE NOT?
+%, and ML-KEM post-quantum cryptographic constructions
+
+\subsection{SPHINCS+}\label{sec:sphincs}
+
+SPHINCS+~\cite{bernstein2019sphincs+} is a hash-function based signature scheme that composes a "hypertree" of Merkle Tree, Winternitz One-time Signature (WOTS+)~\cite{hulsing2013w,merkle1989certified} and Forest of Random Signatures (FORS) signing schemes.  
+These schemes are composed using a pseudorandom function to generate the secret keys at different levels of the tree.  
+At a high level, a SPHINCS+ signature consists of a chain of WOTS+ signatures on Merkle Trees, whose leaves hold additional WOTS+ public keys, which are used to sign additional levels of Merkle Trees; at the lowest level, the Merkle Tree leaves are FORS public keys. 
+The FORS public key is then used to sign an actual message.
+Each of these signatures works be revealing the pre-image of multiple cryptographic digests; signing a message involves hashing the message to a path in the tree, signing the tree roots along the path with the successive public keys, then signing a (separate) cryptographic hash of the message with the FORS leaf key.
+
+\textbf{ADD FIGURE?}
+
+Proving security of the FORS signature scheme requires modeling the hash function as a random oracle, and the concrete security of the scheme also requires reasoning about collisions in a truncated hash function.  The recursive structure of SPHINCS+ makes it a good fit to the inductive proof style of Lean, while the use of multiple oracles and concrete bounds, as well as the game-hopping nature of the security proof are well-suited to the extensions of the \vcvio framework to be developed in Thrust 1.
+
+The project will proceed with a modular approach to proving the security, defining \lean{SecExp} structures that capture the different security and correctness properties required of the various signing schemes.  
+We will prove the security of SPHINCS+ using these assumptions, then prove that the WOTS+ and Merkle Tree schemes satisfies the required properties based on standard security assumptions about the cryptographic hash functions employed.
+The \vcvio oracle-based formalism will allow us to prove the required security properties of the FORS scheme in the random oracle model.
+An important aspect of the evaluation of the project will be the extent to which the \vcvio framework extensions support and help automate the security proof of SPHINCS+.
+
+
+\subsection{Dilithium}
+
+The Dilithium signature scheme~\cite{dilithum}, soon to be standardized as ML-DSA~\cite{ML-DSA}, is an instance of the ``Fiat-Shamir with aborts'' pattern.  
+Dilithium has undergone several revisions during the NIST PQC process; the FIPS ML-DSA standard is a slight revision of Dilithium 3.1, which required a change in an input length to fix a flaw in the security proof.  
+Due to the nature of the scheme, using the  Fiat-Shamir paradigm, a formally verifiable security proof has been out of reach of previous foundational cryptography frameworks.  
+This project will construct the first formally verifiable foundational proof of the security of Dilithium.
+
+Dilithium constructs a Schnorr-like $\Sigma$-protocol based on knowledge of a (M)LWE secret.  
+In this protocol, the secret key is a pair of short vectors (of polynomials) $s_1$, $s_2$, and the public key is a matrix (of polynomials) $A$, and the vector of polynomials $t = s_1A + s_2$.  
+The ``commit'' move of the protocol is to choose a vector $y$ and output $C = yA$; the challenge chooses a random polynomial $c$, and the response is $z = y + s_1c$.  
+The response is verified by checking that $z$ is short, and that $zA - ct$ is close to $yA$.  
+This $\Sigma$-protocol is converted to a signature scheme by the Fiat-Shamir transformation, adding an extra ``rejection sampling'' step that aborts if the response $z$ would leak information about the secret $s_1$.   
+Additional optimizations to reduce the length of public keys and signatures are introduced, including several in the ML-DSA standardization to provide ``Beyond Unforgeability''~\cite{BUFF} security features.
+
+The project will model the full details of the ML-DSA protocol.  
+We will attempt to follow as closely as possible the security proof from~\cite{dilithium3}, using game hopping with both standard reductions based on cryptographic hardness as well as probabilistic and entropy arguments when required. 
+We expect that the full proof will require the rewinding lemma from section~\ref{sec:schnorr}, many of the game hopping techniques from section~\ref{sec:games}, proof of knowledge definitions from section~\ref{sec:pok}, and lattice hardness assumptions from section~\ref{sec:lattice}.
+
+
+\subsection{Falcon}\label{sec:falcon}
+
+The Falcon~\cite{fouque2018falcon} signature scheme is the third signature scheme selected by NIST for standardization.  
+Falcon is based on the GPV~\cite{GPV} hash-and-sign lattice signature framework, relying on the hardness of the Short Integer Solution (SIS) problem in NTRU lattices.
+The implementation of Falcon requires floating-point arithmetic and complex numbers, which are not well-supported in protocol-centered tools.
+On the other hand, Lean has an extensive library of mathematical tools dealing with real and complex numbers,  MathLib, which will aid considerably in formally modeling and verifying the security and correctness of Falcon in \vcvio.
+
+In Falcon, the public parameters include a dimension $n$, which is a power of $2$ and a prime modulus $q$ such that $n | (q-1)$.  Key generation involves choosing short polynomials $f,g,F,G \in \mathbb{Z}[x]/(x^n+1)$ such that $fG-gF = q \bmod (x^n+1)$, and computing the polynomial $h=gf^{-1} \bmod (x^n+1,q)$; the short polynomials form the signing key while the polynomial $h$ is the verification key.
+To sign a message $m$, one computes a salted hash $c = H(r||m)$, represented as a polynomial in $\mathbb{Z}[x]/(x^n+1,q)$, then computes short polynomials $s_1,s_2$ such that $s_1 + s_2h = c \bmod (x^n+1,q)$; the signature is pair of values $r$ and $s_2$.
+Verification recomputes $c$ from $m,r$ and checks that both $s_2$ and $c-s_2h \bmod (x^n+1,q)$ are short vectors.
+Signatures are computed using the fact that $f,F,g,G$ can be used to construct a short basis for the lattice spanned by $\{1,h\}$, and applying a randomized rounding algorithm to prevent signatures from leaking the secret polynomials used to compute shortest vectors in this lattice.
+This randomized procedure is optimized for fast signing using the Fast Fourier transform (FFT) and a recursive tree structure of decomposed representations of the basis.
+
+The project will model the complete Falcon proposal, include any modifications made as the proposal transitions to a FIPS standard, using \vcvio.  We will attempt to follow as closely as possible the security proof from~\cite{GPV} as modified in~\cite{fouque2018falcon} for the NTRU structure, using game hopping with both standard reductions based on cryptographic hardness as well as probabilistic and geometric arguments when required. 
+We expect that the full proof will require many of the game hopping techniques from section~\ref{sec:games}, lattice hardness assumptions from section~\ref{sec:lattice}, and possibly additional techniques.  
+Note that the recursive structure of the key generation and signing algorithms~\cite{fouque2018falcon} lend themselves well to formalization in a shallow, functional embedding like \vcvio, in contrast to the more imperative-oriented embeddings of tools like EasyCrypt and FIXME.
+
+
+%\subsection{ML-KEM?}
+%Kyber, or ML-KEM, is a public-key encryption scheme based on the Module Learning With Errors problem.  ML-KEM employs a variant of the Fujisaki-Okamoto transform to convert a "one-way encryption scheme" into a chosen-ciphertext secure encryption scheme in the Random Oracle model.  HISTORY ABOUT FIXING THIS PROBLEM.
+
+% Discussion of vcvio proof.

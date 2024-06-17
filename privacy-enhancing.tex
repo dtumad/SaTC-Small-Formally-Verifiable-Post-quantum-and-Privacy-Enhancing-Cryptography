@@ -1,0 +1,66 @@
+\section{End-to-end Encrypted Messaging}\label{sec:e2ee}
+Many major messaging platforms -- WhatsApp, iMessage, Google messages, Telegram, Signal -- offer end-to-end encrypted messaging as an option for some communications, and standards or de-facto standards such as Noise~\cite{}, signal~\cite{}, RCS~\cite{} and MLS~\cite{} are being developed to potentially allow interoperability between these platforms.  Because of this widespread adoption and interest, there have been efforts to formally analyze or verify the security of some of these standards, particularly MLS, although these are primarily at the level of protocols and symbolic analysis rather than the cryptographic algorithms. CITES
+
+However, these services do not necessarily conceal metadata about who communicates with whom, may offer or target different notions of deniability, and provide limited or no support for moderation.  
+Many cryptographic protocols in the academic literature have been proposed to address these shortcomings, with some seeing adoption, such as Sealed Sender messages~\cite{} and Private Groups~\cite{} in Signal, and Message Franking in WhatsApp~\cite{}.  
+However, there has been no effort to produce formally-verified proofs of the security or correctness of these protocols.  
+As they move toward possible adoption at internet scale, verifying their security properties before widespread deployment is critical.
+
+\subsection{Metadata concealment}\label{sec:omr}
+An example of a flawed protocol currently in deployment is Signal's Sealed Sender messages~\cite{}. 
+Sealed Sender messages attempt to defend against compromise of the Signal messaging servers by encrypting messages in an additional encrypted ``envelope'' that conceals the sender of the message from the server, so that in principle only the recipient can recover this information.  
+However, Martiny {\em et al.}~\cite{} showed in 2021 that due to the application-level behavior of Signal, this information can be statistically recovered, allowing a compromised server to infer the probable originator of sealed sender messages.  
+The PI and students~\cite{} later showed that these problems extend to group messages, revealing the participants of group conversations despite the use of Signal's Private Groups feature.
+A root cause of these attacks is that the Signal server can observe which sealed-{\em sender} messages are retrieved by each {\em recipient}.
+
+One class of protocols proposed to address this problem is {\em Oblivious Message Retrieval}, or OMR~\cite{}.  
+OMR protocols allow a sender to submit messages to the server along with an encrypted "tag" that indicates the proper recipient.  
+Recipients then submit an encrypted "query" that homomorphically aggregates the messages tagged for the recipient in a way that prevents the server from discovering which messages are aggregated.  
+A series of recent works~\cite{} have developed efficient OMR protocols, but because the security definitions for these schemes involve leveled homomorphism, multi-oracle games, and in some cases proofs of knowledge, no formally verified proofs for their security exist.  
+Since recent works have also identified some gaps in the proofs of previous schemes~\cite{snake}, having a framework for the formal verification of the correctness and security properties provided by these schemes will be an important step in promoting their adoption.
+
+This project will investigate the security and correctness definitions for OMR protocols.  
+We will seek to develop a formally verifiable security proof for at least one OMR construction in \vcvio, for example PerfOMR~\cite{}, which uses the BGV~\cite{BGV} cryptosystem for tag encryption. 
+These efforts will make use of the game-hopping infrastructure developed in section~\ref{sec:games} and the lattice-based primitives and homomorphic security and correctness definitions developed in section~\ref{sec:lattice}.
+We expect that even if other protocols in this family are ultimately adopted by messaging platforms, the results of our efforts will be helpful in constructing formally verifiable proofs for future protocols of a similar nature.
+
+\subsection{Deniability}\label{sec:deniability}
+
+Informally, deniability is the property that a protocol doesn't leak additional information binding a message to its sender.
+This is often listed as a desirable property for an end-to-end encrypted messaging system~\cite{OTR,others...} CITES because adding confidentiality and authentication between users should not compromise the privacy of their conversations in other ways.
+
+There have been many definitions of deniability in the literature on encrypted messaging~\cite{...}; most definitions require the existence of a forgery algorithm that would allow some party to produce a given transcript without communicating with the other participant(s) in the transcript.  
+The variation inthe  inputs given to the forgery algorithm, and both its interaction with and the inputs given to a ``judge'' that attempts to distinguish this forgery from a real transcript give rise to the variety of definitions. 
+Indeed, some definitions of deniability are incompatible with others; some of the variations include online or offline deniability, adapative or nonadaptive compromise, participation or message deniability, and instantaneous or epochal deniability.
+For example, the MLS group key exchange protocol is not instantaneously deniable because every message in the protocol carries a signature from its originator; however, it can support epochal deniability by dividing time into epochs, using a certified ephemeral verification key during each epoch, and publishing the signing key at the end of the epoch.
+
+While proofs of the confidentiality and authentication properties of key agreement protocols in both pairwise settings -- such as Signal's X3DH~\cite{} and PQXDH~\cite{} -- and group settings -- such as SenderKeys~\cite{} and MLS/TreeKem~\cite{} -- have been formally verified, there has been no comparable effort to create formally verifiable proofs of deniability for these protocols.
+It is widely claimed that these protocols provide deniability, and this claim may contribute to the popularity of the tools that implement the protocols, which have user bases ranging from tens of millions to billions of users.
+Because of the complexity and variety of definitions involved, and previous literature identifying gaps in the proofs of deniability for some of these protocols, formally verifying their deniability will close an important gap between their perceived and verified privacy properties.
+
+The project will implement the modular deniability definitions of Fiedler and Janson~\cite{fiedler-janson-PETS24} in \vcvio, and attempt to formally verify the deniability proof of PQXDH. the post-quantum key agreement implemented in Signal.  
+The project will also extend these definitions to epochal deniability and formally verify the epochal deniability proof of TreeKEM given by Hülsing and Weber~\cite{}.  
+These definitions are well-suited for implementation in \vcvio because they are parameterized by the multiple types of oracles given to the forger and the distinguisher, an interface that is captured well by the \lean{OracleSpec} abstraction in \vcvio.  
+We expect that the final proofs will also make use of many of the game-hopping strategies developed in Section~\ref{sec:games};  implementing the security proof for PQXDH will also require using the lattice hardness assumptions developed in Section~\ref{sec:lattice}.
+The result of these efforts will give us greater confidence in the privacy properties of these widely-used protocols, and provide a framework for future efforts in formalizing deniability properties.
+
+\subsection{Abuse reporting} \label{sec:abuse}
+End-to-end encrypted messaging allows parties to keep their conversations private from the platforms that deliver these messages.  However, this same privacy can make it difficult for users to report or seek help avoiding abuse of the system to the platform: if a ciphertext is encrypted so that only the recipient can read it, then proving that it corresponds to a given abusive plaintext can be challenging.  Several related notions for addressing this problem -- message franking~\cite{FBM,grubbs-crypto17}, message tracing~\cite{Tyagi}, originator tracing~\cite{Peale} -- have been proposed in the literature, along with a variety of primitives for achieving these goals~\cite{SMF,AMF, Tyagi, Hecate, Cerberus, Peale, ACGKA, NDSS paper, PoPETS paper,MlsGov}.
+
+SMF FIGURE
+
+As an example, we consider two early schemes.  The first scheme, shown in Figure~\ref{}, is a Symmetric Message Franking (SMF) scheme, implemented in the encrypted Facebook Messenger system used by several hundred million people on a daily basis.
+In this scheme, to send a message $m$ to recipient $r$, the sender $s$ chooses a random symmetric key $K_f$, then computes a tag $t = HMAC(K_f,m)$ and ciphertext $c = Enc(K_f||m)$ (encrypted using a symmetric key shared between the sender and the recipient), then sends $c,t$ to the server $F$.  
+The server computes a second tag $\tau = HMAC(K_F,s||r||t)$ and sends $c,t,\tau$ to $r$.  
+The recipient verifies that the tag $t$ is correct after decrypting $m$, and can report an abusive message by sending $s,r,m,K_f,t,\tau$ to the server.
+Noting that this scheme requires the server's involvement and knowledge of sender and recipient, Tyagi {\em et al.}~\cite{AMF} proposed an Asymmetric Message Franking scheme (AMF) that replaces the tags $t$ and $\tau$ with a signature proof of knowledge on the plaintext that can only be computed with knowledge of the sender's secret key or the moderator's secret key.
+
+An important goal of both the Facebook Messenger scheme and AMF, and many of the following schemes, is deniability: neither the recipient nor the judge should be able to convince any other party that the sender composed a particular message.  
+Following work on deniable messaging, Tyagi {\em et al}~\cite{AMF} expressed this condition as requiring forger algorithms given a variety of goals, and proved that AMF satisfied this goal, but did not give a formally verifiable proof.
+The SMF scheme has not had a full proof of deniability; while this property is intuitively provided by the use of symmetric primitives, we note that an earlier deployment by Facebook did not provide accountability~\cite{}.
+As more E2EE systems move to deploy moderation tools, it is thus critical to have formally verified proofs that these tools provide the required privacy and security properties.
+
+As in the case of deniable messaging, expressing the security conditions and proofs for these protocols has been out of the reach of previous cryptographic formal verification frameworks, due to the complex multi-oracle games and the use of more complicated primitives such as proofs of knowledge.  
+In this project, we will use \vcvio to examine and give the first formally-verifiable security proofs for SMF and AMF. 
+This work will build on the deniability experiments built in Section~\ref{sec:deniability}, making full use of the extensions developed in Phase 1 (sections~\ref{sec:games} and \ref{sec:pok}).
+We expect the results to both provide greater assurance of the privacy provided to billions of users by Facebook Messenger, as well as providing a critical framework for formally verifying the security of future protocols developed and deployed for moderation and governance of encrypted group messaging systems. 
