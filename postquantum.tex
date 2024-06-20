@@ -1,5 +1,7 @@
 \section{Postquantum cryptosystems}\label{sec:pq}
 
+% Generally I think all of these things would be reasonable to try and do
+
 The NIST PQCRYPTO competition selected several algorithms for standardization as post-quantum cryptographic primitives.  While all of the selected algorithms have security proofs based on reductions to hard problems such as the short integer solutions problem, the module learning with errors problem and the security of cryptographic hash functions, the security proofs can be quite involved, and throughout the process of the competition several subtle errors in the proofs of the constructions have been identified and fixed.  
 It would be ideal if we had formally-verifiable proofs of the security of these constructions, but since the proofs involve the random oracle model and typically involve adversaries with access to multiple oracle types, such proofs are out of reach of existing frameworks.  
 Because \vcvio was designed to handle such obstacles, the project will aim to produce the first formally-verified security proofs for the SPHINCS+, Falcon, and Dilithium signature schemes.  
@@ -19,7 +21,7 @@ Each of these signatures works be revealing the pre-image of multiple cryptograp
 
 Proving security of the FORS signature scheme requires modeling the hash function as a random oracle, and the concrete security of the scheme also requires reasoning about collisions in a truncated hash function.  The recursive structure of SPHINCS+ makes it a good fit to the inductive proof style of Lean, while the use of multiple oracles and concrete bounds, as well as the game-hopping nature of the security proof are well-suited to the extensions of the \vcvio framework to be developed in Thrust 1.
 
-The project will proceed with a modular approach to proving the security, defining \lean{SecExp} structures that capture the different security and correctness properties required of the various signing schemes.
+The project will proceed with a modular approach to proving the security, defining \lean{SecExp} structures that capture the different security and correctness properties required of the various signing schemes.  
 We will prove the security of SPHINCS+ using these assumptions, then prove that the WOTS+ and Merkle Tree schemes satisfies the required properties based on standard security assumptions about the cryptographic hash functions employed.
 The \vcvio oracle-based formalism will allow us to prove the required security properties of the FORS scheme in the random oracle model.
 An important aspect of the evaluation of the project will be the extent to which the \vcvio framework extensions support and help automate the security proof of SPHINCS+.
@@ -43,8 +45,8 @@ This $\Sigma$-protocol is converted to a signature scheme by the Fiat-Shamir tra
 % Side issue but rejection sampling is actually somewhat hard in the current approach I have. Syntactic abort would help
 Additional optimizations to reduce the length of public keys and signatures are introduced, including several in the ML-DSA standardization to provide ``Beyond Unforgeability''~\cite{BUFF} security features.
 
-The project will model the full details of the ML-DSA protocol.
-We will attempt to follow as closely as possible the security proof from~\cite{dilithium3}, using game hopping with both standard reductions based on cryptographic hardness as well as probabilistic and entropy arguments when required.
+The project will model the full details of the ML-DSA protocol.  
+We will attempt to follow as closely as possible the security proof from~\cite{dilithium3}, using game hopping with both standard reductions based on cryptographic hardness as well as probabilistic and entropy arguments when required. 
 We expect that the full proof will require the rewinding lemma from section~\ref{sec:schnorr}, many of the game hopping techniques from section~\ref{sec:games}, proof of knowledge definitions from section~\ref{sec:pok}, and lattice hardness assumptions from section~\ref{sec:lattice}.
 
 
@@ -61,8 +63,8 @@ Verification recomputes $c$ from $m,r$ and checks that both $s_2$ and $c-s_2h \b
 Signatures are computed using the fact that $f,F,g,G$ can be used to construct a short basis for the lattice spanned by $\{1,h\}$, and applying a randomized rounding algorithm to prevent signatures from leaking the secret polynomials used to compute shortest vectors in this lattice.
 This randomized procedure is optimized for fast signing using the Fast Fourier transform (FFT) and a recursive tree structure of decomposed representations of the basis.
 
-The project will model the complete Falcon proposal, include any modifications made as the proposal transitions to a FIPS standard, using \vcvio.  We will attempt to follow as closely as possible the security proof from~\cite{GPV} as modified in~\cite{fouque2018falcon} for the NTRU structure, using game hopping with both standard reductions based on cryptographic hardness as well as probabilistic and geometric arguments when required.
-We expect that the full proof will require many of the game hopping techniques from section~\ref{sec:games}, lattice hardness assumptions from section~\ref{sec:lattice}, and possibly additional techniques.
+The project will model the complete Falcon proposal, include any modifications made as the proposal transitions to a FIPS standard, using \vcvio.  We will attempt to follow as closely as possible the security proof from~\cite{GPV} as modified in~\cite{fouque2018falcon} for the NTRU structure, using game hopping with both standard reductions based on cryptographic hardness as well as probabilistic and geometric arguments when required. 
+We expect that the full proof will require many of the game hopping techniques from section~\ref{sec:games}, lattice hardness assumptions from section~\ref{sec:lattice}, and possibly additional techniques.  
 Note that the recursive structure of the key generation and signing algorithms~\cite{fouque2018falcon} lend themselves well to formalization in a shallow, functional embedding like \vcvio, in contrast to the more imperative-oriented embeddings of tools like EasyCrypt and FIXME.
 
 

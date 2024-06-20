@@ -1,7 +1,7 @@
 \section{Framework Extensions}
 
-In order to enhance the usability of the \vcvio framework by other crypgtographers, and its applicability to the postquantum and privacy-enhancing cryptographic constructions investigated in the next sections, we will need to introduce several additional elements to the framework.
-First, we will introduce a library of program structures, lemmas, and proof tactics designed to support the argument style used in modern cryptographic security proofs, especially the ``game hopping'' proof strategy.
+In order to enhance the usability of the \vcvio framework by other crypgtographers, and its applicability to the postquantum and privacy-enhancing cryptographic constructions investigated in the next sections, we will need to introduce several additional elements to the framework. 
+First, we will introduce a library of program structures, lemmas, and proof tactics designed to support the argument style used in modern cryptographic security proofs, especially the ``game hopping'' proof strategy.  
 Second, we will introduce methods to model ``proofs of knowledge,'' a common element used in modern cryptographic protocols, that are usually proven secure using rewinding lemmas.
 Finally, we will introduce \vcvio structures to represent the hard lattice-based problems that form the basis for both homomorphic encryption schemes and many proposed post-quantum cryptosystems, along with structures to represent the homomorphic properties of these problems.
 
@@ -56,15 +56,15 @@ As noted in section~\ref{sec:games}, the abstractions and artifact produced in t
 
 \subsection{Homomorphic primitives}
 \label{sec:lattice}
-In the past 15 years, many new cryptographic algorithms have been proposed based on hard lattice problems.
-These include many variants of the Learning with Errors (LWE) problem (Ring, Module, Rounding, Decision) and the Short Integer Solution (SIS) problem.
-Some interesting aspects of these problems is that compared to problems like discrete logarithm or integer factoring, they do not have unique solutions; they have a wider variety of parameters, including (potentially multiple) noise distributions, integer and polynomial moduli, and degrees and dimensions; they can lead to encryption or signing algorithms that produce errors; and the problem instances have useful algebraic structures.
+In the past 15 years, many new cryptographic algorithms have been proposed based on hard lattice problems.  
+These include many variants of the Learning with Errors (LWE) problem (Ring, Module, Rounding, Decision) and the Short Integer Solution (SIS) problem.  
+Some interesting aspects of these problems is that compared to problems like discrete logarithm or integer factoring, they do not have unique solutions; they have a wider variety of parameters, including (potentially multiple) noise distributions, integer and polynomial moduli, and degrees and dimensions; they can lead to encryption or signing algorithms that produce errors; and the problem instances have useful algebraic structures.  
 This in turn has led to interesting new primitives, such as the BGV~\cite{bgv} and CKKS~\cite{ckks} ``leveled homomorphic encryption'' schemes, which  form the basis of a variety of privacy-preserving protocols~\cite{,,} FIXME and post-quantum cryptosystems.
 
 % I think \lean{HardRelation} is probably the model for these things. I could be wrong but I think hardness of e.g. LWE problems all would be instances of that typeclass
 % I could add something like "Currently we have abstract hard relations, but only particular implementations of this for DL/DDH. The project will extend this with a more comprehensive set of problems"
 To produce formally verifiable proofs of the correctness and security of schemes based on these problems, the project will introduce new Lean structures based on the \lean{OracleAlg} and \lean{SimOracle} types, which model the diversity of hard problems in this space.
-The project will investigate and design \lean{SecExp} variants in \vcvio that express the security problems related to these primitives.
+The project will investigate and design \lean{SecExp} variants in \vcvio that express the security problems related to these primitives.  
 The use of non-uniform distributions such as the discrete gaussian distribution, and the need for unusual algebraic structures will be notable challenges.
 However, we expect that much of the needed analytical tools can be adapated from the Lean MathLib project.
 

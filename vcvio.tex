@@ -35,7 +35,7 @@ For example the function \lean{List.cons} is polymorphic in the type of the list
 List.cons : {A : Type} → List A → A → List A
 \end{leancode}
 
-The curly braces indicate that when this function is called Lean should try to automatically determine the value of \lean{A} based on type inference.
+The curly braces indicate that when this function is called Lean should try to automatically determine the value of \lean{A} based on type inference. 
 This allows us to write \lean{List.cons xs x} whether the elements of \lean{xs} are strings, natural numbers, or something else.
 
 The standard algebraic data types are built into the main language.
@@ -50,7 +50,7 @@ Under this framework, an element \lean{P : Prop} is a mathematical statement, an
 A tactic proof consists of a number of steps that modify the current "goal" to be proven, either solving it explicitly or generating new goal(s) that would suffice to complete the proof.
 The initial goal is the statement being proved, and a proof is complete if no goals remain.
 Many tactics are built in to the core language, but they can also be defined by users.
-One particularly useful tactic is \lean{simp}, which takes in a list of equivalences, and attempts to replace any instances of the left hand side of the equality in the goal with the right hand side.
+One particularly useful tactic is \lean{simp}, which takes in a list of equivalences, and attempts to replace any instances of the left hand side of the equality in the goal with the right hand side. 
 As an example we can use it to show that if $x + y = z$ for some non-negative $y$, then either $x < z$ or $y$ is $0$:
 
 \begin{leancode}
@@ -157,7 +157,7 @@ One major issue in this representation is that it gives no way to sequence or co
 For example we can't bind \lean{coin} to an adversary that has access to both a coin oracle and random oracle, since our monad definition requires that the \lean{OracleSpec} remain fixed throughout a computation.
 To solve this we create a system for automatically coercing the type of a computation to one with a larger set of oracles.
 We do this using Lean's \lean{Coe A B} type-class, which specifies to Lean a way to automatically convert a value of type \lean{A} to one of type \lean{B} (e.g. \lean{Coe ℚ ℝ} allows a rational number to be viewed as an element of the reals).
-Lean will automatically perform a type-class search for this whenever it fails to type check an expression, and apply a coercion if it finds one.
+Lean will automatically perform a type-class search for this whenever it fails to type check an expression, and apply a coercion if it finds one.  
 The semantics we define in the next to sections are highly compatible with these coercions, and and our system is generally able to reduce a proof about a coerced computation down to an analogous proof about the original computation automatically.
 
 \paragraph{Probability Semantics} \label{DistSemantics}
@@ -172,7 +172,7 @@ We will write \lean{[= x | oa]} for the probability associated to \lean{x} by \l
 [= u | query i t] = 1 / (spec.range i).card
 \end{leancode}
 We also define \lean{[p | oa]} to be the probability associated to the event \lean{p : α → Prop}.
-If the event is instead a set \lean{e : Set α} then we can write \lean{[(· ∈ e) | oa]} for the probability that the output is a member of \lean{e}.
+% If the event is instead a set \lean{e : Set α} then we can write \lean{[(· ∈ e) | oa]} for the probability that the output is a member of \lean{e}.
 We define \lean{support oa} to be the set of possible outputs of \lean{oa}, i.e. the set of \lean{x} such that \lean{[= x | oa] ≠ 0}.
 We make heavy use of this when showing that an event has probability either \lean|1| or \lean|0|, allowing us to think about ``possible outputs'' rather than explicit probabilities.
 
@@ -324,7 +324,7 @@ The proof draws on Mathlib~\cite{mathlib} machinery and consists of XXX lines of
 
 \subsection{Comparison}
 
-We note that prior frameworks do not have the expressive power necessary to express a proof of the forking lemma, but in some cases may provide better automation and usability.
+We note that prior frameworks do not have the expressive power necessary to express a proof of the forking lemma, but in some cases may provide better automation and usability.  
 As a point of comparison, Table~\ref{tab:thecomparisontable} includes the number of lines of code required for several example cryptographic security proofs in \vcvio as well as other state of the art frameworks.  (CITE CryptHOL, elaborate on results)
 % I still just have two fully complete reference impl for this table
 % Can work on getting at least one or two more now that F-S/sigma-protocol stuff is done
