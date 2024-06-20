@@ -1,6 +1,7 @@
 \section{Postquantum cryptosystems}\label{sec:pq}
 
 % Generally I think all of these things would be reasonable to try and do
+% Is it worth mentioning QROM? "Our oracle based framework makes it natural/possible to view quantum computations as providing different kinds of oracles. We will extend with this and give proofs in both ROM and QROM"?
 
 The NIST PQCRYPTO competition selected several algorithms for standardization as post-quantum cryptographic primitives.  While all of the selected algorithms have security proofs based on reductions to hard problems such as the short integer solutions problem, the module learning with errors problem and the security of cryptographic hash functions, the security proofs can be quite involved, and throughout the process of the competition several subtle errors in the proofs of the constructions have been identified and fixed.  
 It would be ideal if we had formally-verifiable proofs of the security of these constructions, but since the proofs involve the random oracle model and typically involve adversaries with access to multiple oracle types, such proofs are out of reach of existing frameworks.  
