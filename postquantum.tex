@@ -1,17 +1,17 @@
 \section{Postquantum cryptosystems}\label{sec:pq}
 
-The NIST PQCRYPTO competition selected several algorithms for standardization as post-quantum cryptographic primitives.  While all of the selected algorithms have security proofs based on reductions to hard problems such as the short integer solutions problem, the module learning with errors problem and the security of cryptographic hash functions, the security proofs can be quite involved, and throughout the process of the competition several subtle errors in the proofs of the constructions have been identified and fixed.
-It would be ideal if we had formally-verifiable proofs of the security of these constructions, but since the proofs involve the random oracle model and typically involve adversaries with access to multiple oracle types, such proofs are out of reach of existing frameworks.
-Because \vcvio was designed to handle such obstacles, the project will aim to produce the first formally-verified security proofs for the SPHINCS+, Falcon, and Dilithium signature schemes.
+The NIST PQCRYPTO competition selected several algorithms for standardization as post-quantum cryptographic primitives.  While all of the selected algorithms have security proofs based on reductions to hard problems such as the short integer solutions problem, the module learning with errors problem and the security of cryptographic hash functions, the security proofs can be quite involved, and throughout the process of the competition several subtle errors in the proofs of the constructions have been identified and fixed.  
+It would be ideal if we had formally-verifiable proofs of the security of these constructions, but since the proofs involve the random oracle model and typically involve adversaries with access to multiple oracle types, such proofs are out of reach of existing frameworks.  
+Because \vcvio was designed to handle such obstacles, the project will aim to produce the first formally-verified security proofs for the SPHINCS+, Falcon, and Dilithium signature schemes.  
 
 %ML-KEM: MAYBE NOT?
 %, and ML-KEM post-quantum cryptographic constructions
 
 \subsection{SPHINCS+}\label{sec:sphincs}
 
-SPHINCS+~\cite{bernstein2019sphincs+} is a hash-function based signature scheme that composes a "hypertree" of Merkle Tree, Winternitz One-time Signature (WOTS+)~\cite{hulsing2013w,merkle1989certified} and Forest of Random Signatures (FORS) signing schemes.
-These schemes are composed using a pseudorandom function to generate the secret keys at different levels of the tree.
-At a high level, a SPHINCS+ signature consists of a chain of WOTS+ signatures on Merkle Trees, whose leaves hold additional WOTS+ public keys, which are used to sign additional levels of Merkle Trees; at the lowest level, the Merkle Tree leaves are FORS public keys.
+SPHINCS+~\cite{bernstein2019sphincs+} is a hash-function based signature scheme that composes a "hypertree" of Merkle Tree, Winternitz One-time Signature (WOTS+)~\cite{hulsing2013w,merkle1989certified} and Forest of Random Signatures (FORS) signing schemes.  
+These schemes are composed using a pseudorandom function to generate the secret keys at different levels of the tree.  
+At a high level, a SPHINCS+ signature consists of a chain of WOTS+ signatures on Merkle Trees, whose leaves hold additional WOTS+ public keys, which are used to sign additional levels of Merkle Trees; at the lowest level, the Merkle Tree leaves are FORS public keys. 
 The FORS public key is then used to sign an actual message.
 Each of these signatures works be revealing the pre-image of multiple cryptographic digests; signing a message involves hashing the message to a path in the tree, signing the tree roots along the path with the successive public keys, then signing a (separate) cryptographic hash of the message with the FORS leaf key.
 
