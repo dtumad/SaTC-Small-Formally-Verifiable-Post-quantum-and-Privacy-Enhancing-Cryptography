@@ -1,5 +1,8 @@
 \section{Postquantum cryptosystems}\label{sec:pq}
 
+% Generally I think all of these things would be reasonable to try and do
+% Is it worth mentioning QROM? "Our oracle based framework makes it natural/possible to view quantum computations as providing different kinds of oracles. We will extend with this and give proofs in both ROM and QROM"?
+
 The NIST PQCRYPTO competition selected several algorithms for standardization as post-quantum cryptographic primitives.  While all of the selected algorithms have security proofs based on reductions to hard problems such as the short integer solutions problem, the module learning with errors problem and the security of cryptographic hash functions, the security proofs can be quite involved, and throughout the process of the competition several subtle errors in the proofs of the constructions have been identified and fixed.  
 It would be ideal if we had formally-verifiable proofs of the security of these constructions, but since the proofs involve the random oracle model and typically involve adversaries with access to multiple oracle types, such proofs are out of reach of existing frameworks.  
 Because \vcvio was designed to handle such obstacles, the project will aim to produce the first formally-verified security proofs for the SPHINCS+, Falcon, and Dilithium signature schemes.  
@@ -27,16 +30,20 @@ An important aspect of the evaluation of the project will be the extent to which
 
 \subsection{Dilithium}
 
-The Dilithium signature scheme~\cite{dilithum}, soon to be standardized as ML-DSA~\cite{ML-DSA}, is an instance of the ``Fiat-Shamir with aborts'' pattern.  
-Dilithium has undergone several revisions during the NIST PQC process; the FIPS ML-DSA standard is a slight revision of Dilithium 3.1, which required a change in an input length to fix a flaw in the security proof.  
-Due to the nature of the scheme, using the  Fiat-Shamir paradigm, a formally verifiable security proof has been out of reach of previous foundational cryptography frameworks.  
+The Dilithium signature scheme~\cite{dilithum}, soon to be standardized as ML-DSA~\cite{ML-DSA}, is an instance of the ``Fiat-Shamir with aborts'' pattern.
+Dilithium has undergone several revisions during the NIST PQC process; the FIPS ML-DSA standard is a slight revision of Dilithium 3.1, which required a change in an input length to fix a flaw in the security proof.
+Due to the nature of the scheme, using the  Fiat-Shamir paradigm, a formally verifiable security proof has been out of reach of previous foundational cryptography frameworks.
+% Paper recently that already did this: https://eprint.iacr.org/2023/246
+% Key thing is that they can give a Fiat-Shamir for Identification protocols (although not sigma protocols w/o forking lemma)
+% And showing the id-protocol security doesn't need forking (unlike the id protocol corresponding to Schnorr)
 This project will construct the first formally verifiable foundational proof of the security of Dilithium.
 
-Dilithium constructs a Schnorr-like $\Sigma$-protocol based on knowledge of a (M)LWE secret.  
-In this protocol, the secret key is a pair of short vectors (of polynomials) $s_1$, $s_2$, and the public key is a matrix (of polynomials) $A$, and the vector of polynomials $t = s_1A + s_2$.  
-The ``commit'' move of the protocol is to choose a vector $y$ and output $C = yA$; the challenge chooses a random polynomial $c$, and the response is $z = y + s_1c$.  
-The response is verified by checking that $z$ is short, and that $zA - ct$ is close to $yA$.  
-This $\Sigma$-protocol is converted to a signature scheme by the Fiat-Shamir transformation, adding an extra ``rejection sampling'' step that aborts if the response $z$ would leak information about the secret $s_1$.   
+Dilithium constructs a Schnorr-like $\Sigma$-protocol based on knowledge of a (M)LWE secret.
+In this protocol, the secret key is a pair of short vectors (of polynomials) $s_1$, $s_2$, and the public key is a matrix (of polynomials) $A$, and the vector of polynomials $t = s_1A + s_2$.
+The ``commit'' move of the protocol is to choose a vector $y$ and output $C = yA$; the challenge chooses a random polynomial $c$, and the response is $z = y + s_1c$.
+The response is verified by checking that $z$ is short, and that $zA - ct$ is close to $yA$.
+This $\Sigma$-protocol is converted to a signature scheme by the Fiat-Shamir transformation, adding an extra ``rejection sampling'' step that aborts if the response $z$ would leak information about the secret $s_1$.
+% Side issue but rejection sampling is actually somewhat hard in the current approach I have. Syntactic abort would help
 Additional optimizations to reduce the length of public keys and signatures are introduced, including several in the ML-DSA standardization to provide ``Beyond Unforgeability''~\cite{BUFF} security features.
 
 The project will model the full details of the ML-DSA protocol.  
@@ -46,7 +53,7 @@ We expect that the full proof will require the rewinding lemma from section~\ref
 
 \subsection{Falcon}\label{sec:falcon}
 
-The Falcon~\cite{fouque2018falcon} signature scheme is the third signature scheme selected by NIST for standardization.  
+The Falcon~\cite{fouque2018falcon} signature scheme is the third signature scheme selected by NIST for standardization.
 Falcon is based on the GPV~\cite{GPV} hash-and-sign lattice signature framework, relying on the hardness of the Short Integer Solution (SIS) problem in NTRU lattices.
 The implementation of Falcon requires floating-point arithmetic and complex numbers, which are not well-supported in protocol-centered tools.
 On the other hand, Lean has an extensive library of mathematical tools dealing with real and complex numbers,  MathLib, which will aid considerably in formally modeling and verifying the security and correctness of Falcon in \vcvio.

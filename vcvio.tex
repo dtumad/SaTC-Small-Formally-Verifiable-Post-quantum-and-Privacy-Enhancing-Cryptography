@@ -1,20 +1,24 @@
 \section{Background and Preliminary work}
 
+% I'm a little unsure what "tense" this should all be written in? As compared to the paper
+% e.g. "We next define a representation as..." vs. "VCVio then represents as..."
+
 \subsection{Previous frameworks and challenges}
 A wide variety of frameworks have been developed to reason about cryptographic proofs in the computational setting, which all have different benefits and drawbacks depending on the specific use cases.
-Some like EasyCrypt \cite{canetti2019easyuc}, CryptoVerif \cite{blanchet2007cryptoverif} or SSProve \cite{abate2021ssprove} take a protocol centered approach that focuses mainly on high-level functionality and behavior, often using a deeply-embedded language and proof system to represent and reason about computations.
-Others like FCF \cite{FCF,petcher2015foundational}, CertiCrypt \cite{zanella2010formal}, or CryptHOL \cite{basin2020crypthol} take a more foundational approach, building all constructions from a small computing base with limited axiomatization.
+% I'm not sure if presenting this as a dichotomy is useful. It's more of a spectrum with some frameworks focusing more on some things
+Some like EasyCrypt \cite{canetti2019easyuc}, CryptoVerif \cite{blanchet2007cryptoverif}, OWL \cite{gancher2023owl} focus mainly on high-level functionality and behavior, often using a deeply-embedded language and proof system to represent and reason about computations.
+Others like FCF \cite{FCF,petcher2015foundational}, CertiCrypt \cite{zanella2010formal}, SSProve \cite{abate2021ssprove}, or CryptHOL \cite{basin2020crypthol} take a more foundational approach, building all constructions from a small computing base with limited axiomatization.
 Usually computations in this approach are represented by a shallow embedding into a more general proof assistant like Coq or Isabelle.
 The foundational approach has significant benefits in terms of flexibility and extensibility, and allows for concrete security bounds,
 however it usually provides less automation when writing proofs.
 
 One important limitation with existing foundational systems is how they reason about the oracles available to a computation.
 In FCF, for example, oracle access is specified by a single oracle with fixed input and output types. This makes it difficult to reason about situations where multiple (or varying) oracles are available, e.g. both a signing oracle and a random oracle.  Although dependent sum types for the domain and range of different oracles could be used, the specification of programs and reductions that use these oracles quickly becomes cumbersome, and cannot easily handle composition of programs that use different sets of oracles.
-In CryptHOL, oracles are implemented as ``generative probabilistic values'' and require restructuring adversaries and experiments into a series of smaller computations that run between oracle calls.  Because adversaries cannot access the state of oracles, CryptHOL cannot easily express reductions in which oracles are reactively ``programmed'' or rewound to intermediate states by one adversary -- suach as an adversary that solves a hard computational problem -- in response to the queries or results output by another adversary, such as an adversary that outputs a signature forgery. 
+In CryptHOL, oracles are implemented as ``generative probabilistic values'' and require restructuring adversaries and experiments into a series of smaller computations that run between oracle calls.  Because adversaries cannot access the state of oracles, CryptHOL cannot easily express reductions in which oracles are reactively ``programmed'' or rewound to intermediate states by one adversary -- suach as an adversary that solves a hard computational problem -- in response to the queries or results output by another adversary, such as an adversary that outputs a signature forgery.
 
 \subsection{The VCVio framework}
 \label{sec:vcvio}
-Similar to FCF and CryptHOL, \vcvio uses a shallow embedding of cryptographic algorithms, reductions, and security definitions as functional programs in the Lean proof assistant.  Lean  is a dependently typed programming language and interactive proof assistant that enables computer verification of both mathematical proofs and properties of programs, similar to Coq or Isabelle.  
+Similar to FCF and CryptHOL, \vcvio uses a shallow embedding of cryptographic algorithms, reductions, and security definitions as functional programs in the Lean proof assistant. Lean is a dependently typed programming language and interactive proof assistant that enables computer verification of both mathematical proofs and properties of programs, similar to Coq or Isabelle.
 
 At a basic level Lean is a functional programming language, and its syntax is similar to languages like Haskell or OCaml.
 The core logic of Lean is based on a type theory called the calculus of constructions (CIC), where every expression is a term and every term has a type, denoted \lean{(a : A)}.
@@ -37,7 +41,8 @@ This allows us to write \lean{List.cons xs x} whether the elements of \lean{xs} 
 The standard algebraic data types are built into the main language.
 Product types are written \lean{A × B} with canonical elements \lean{(a, b)} for \lean{a : A} and \lean{b : B}.
 Sum types are written \lean{A ⊕ B} with canonical elements \lean{inl a} and \lean{inr b}.
-The singleton type \lean{Unit} has a single canonical element \lean{()}, and the empty type \lean{⊥} has no elements.
+% Lean deprecated ⊥ even though it so many keystrokes
+The singleton type \lean{Unit} has a single canonical element \lean{()}, and the empty type \lean{Empty} has no elements.
 We also have a type \lean{Bool}, with canonical elements \lean{true} and \lean{false}.
 
 In order to be able to write and verify proofs, Lean also has a type \lean{Prop} to represent mathematical propositions, and we view the propositions in \lean{Prop} as themselves being types.
@@ -58,31 +63,31 @@ As an example we can use it to show that if $x + y = z$ for some non-negative $y
 In order to reason about cryptographic protocols, we define a shallow embedding of computations with oracle access into the Lean type system, using a free monad to augment regular Lean functions with queries to oracles.
 
 \paragraph{Specifying Oracles}
-Before defining our model of computation we define a way to specify the set of oracles available to a computation, via a structure \lean{OracleSpec} consisting of an indexing set $\iota$ of available oracles and maps from indices to the domain and range types of the corresponding oracle:
+Before defining our model of computation we define a way to specify the set of oracles available to a computation via a structure \lean{OracleSpec ι}, where $\iota$ is an indexing set for available oracles, consisting of maps from indices to the domain and range types of the corresponding oracle:
 \begin{leancode}
-  structure OracleSpec where (ι : Type) (domain range : ι → Type)
+  structure OracleSpec (ι : Type) where (domain range : ι → Type)
 \end{leancode}
 
 Each element \lean{i : ι} of the indexing set corresponds to a unique oracle, and \lean{domain i} and \lean{range i} are the input and output types of the oracle corresponding to \lean{i}.
 Note that we don't specify any behavior for these oracles; this should rather be seen as analogous to a type signature for them.
-For instance we define \lean{singletonSpec T U} to represent access to
+For instance we define \lean{singletonSpec T U} (Denoted \lean{T →ₒ U}) to represent access to
 a single oracle with input type \lean{T} and output type \lean{U},
 by using the singleton type \lean{Unit} for the indexing set, and have the \lean{domain} and \lean{range} functions return \lean{T} and \lean{U} respectively:
 \begin{leancode}
-  def singletonSpec (T U : Type) : OracleSpec :=
-    (ι := Unit) (domain := λ () ↦ T) (range := λ () ↦ U)
+  def singletonSpec (T U : Type) : OracleSpec Unit :=
+    (domain := λ () ↦ T) (range := λ () ↦ U)
 \end{leancode}
-We also define \lean{emptySpec : OracleSpec} to represent having no oracles at all.
-We introduce the notation \lean{T →ₒ U} for the singleton spec and \lean{[]ₒ} for the empty spec.
+% We also define \lean{emptySpec : OracleSpec} to represent having no oracles at all.
+% We introduce the notation \lean{T →ₒ U} for the singleton spec and \lean{[]ₒ} for the empty spec.
 
 In order to represent probabilistic computation we define two additional oracle sets.
 Firstly \lean{coinSpec} that gives access to a single coin flipping oracle returning a \lean{Bool},
 and secondly \lean{unifSpec} that gives access to an infinite family of oracles, indexed over \lean{ℕ}, where the $n$th oracle chooses a random value between $0$ and $n$ inclusively (represented by the type \lean{Fin (n + 1)} in Lean).
 Since the input to these oracles is irrelevant, in both cases we use \lean{Unit} for the domain types:
 \begin{leancode}
-  def coinSpec : OracleSpec := Unit →ₒ Bool
-  def unifSpec : OracleSpec :=
-    (ι := ℕ) (domain := λ _ ↦ Unit) (range := λ n ↦ Fin (n + 1))
+  def coinSpec : OracleSpec Unit := Unit →ₒ Bool
+  def unifSpec : OracleSpec ℕ :=
+    (domain := λ _ ↦ Unit) (range := λ n ↦ Fin (n + 1))
 \end{leancode}
 
 \paragraph{Representing Computations.}
@@ -106,7 +111,7 @@ Most of the "interesting" behavior of a computation is captured in this function
 
 We define \lean{query i t} to be the computation that returns the result of querying oracle \lean{i} with \lean{t}, directly returning the result as a pure value after:
 \begin{leancode}
-  def query (i : spec.ι) (t : spec.domain i) : 
+  def query (i : spec.ι) (t : spec.domain i) :
     OracleComp spec (spec.range i) :=
     queryBind' i t (spec.range i) (λ u ↦ pure' (spec.range i) x)
 \end{leancode}
@@ -167,11 +172,11 @@ We will write \lean{[= x | oa]} for the probability associated to \lean{x} by \l
 [= u | query i t] = 1 / (spec.range i).card
 \end{leancode}
 We also define \lean{[p | oa]} to be the probability associated to the event \lean{p : α → Prop}.
-If the event is instead a set \lean{e : Set α} then we can write \lean{[(· ∈ e) | oa]} for the probability that the output is a member of \lean{e}. 
+% If the event is instead a set \lean{e : Set α} then we can write \lean{[(· ∈ e) | oa]} for the probability that the output is a member of \lean{e}.
 We define \lean{support oa} to be the set of possible outputs of \lean{oa}, i.e. the set of \lean{x} such that \lean{[= x | oa] ≠ 0}.
 We make heavy use of this when showing that an event has probability either \lean|1| or \lean|0|, allowing us to think about ``possible outputs'' rather than explicit probabilities.
 
-\paragraph{Simulation Semantics} 
+\paragraph{Simulation Semantics}
 We now give an alternative semantics for \lean{OracleComp}, which provide a method for simulating the behavior of oracles.
 The main construction is a function \lean{simulate} that recursively substitutes the queries to an oracle with a specified implementation (that may have access to a different set of oracles).
 We allow the simulation to maintain some internal state, and augment the return value of the computation with the final state.
@@ -205,50 +210,65 @@ For example we can easily implement simulation oracles \lean{loggingOracle} for 
 
 \subsubsection{Cryptographic Protocols and Security Games} \label{sec:protocols}
 In this section we give a simple abstraction layer that can be used to specify cryptographic primitives, protocols, and security games.
+% This is sort of less true now that I'm bundling the security parameters rather than having two abstraction layers
 We focus here on using this to establish concrete security bounds, however it can be directly extended to the asymptotic setting.
 We start by defining a type \lean{OracleAlg spec} that just contains a specification of how to simulate oracles in \lean{spec} using \lean{unifSpec}.
 Here \lean{spec} should be thought of as some global oracles for a protocol (e.g. a random oracle), and the structure as containing the ``intended behavior'' of them.
-We also assume an intended initial state (e.g. an empty cache):
+We also assume an intended initial state (e.g. an empty cache).
+All of these fields are indexed by a security parameter as well:
 \begin{leancode}
-  structure OracleAlg (spec : OracleSpec) where
-   (baseState : Type) (init_state : baseState)
-   baseSimOracle : spec →[baseState] unifSpec
+  structure OracleAlg {ι : Type} (spec : ℕ → OracleSpec ι) where
+    baseState (n : ℕ) : Type
+    init_state (n : ℕ) : baseState sp
+    baseSimOracle (n : ℕ) : spec n →[baseState n]ₛₒ unifSpec
 \end{leancode}
-Given \lean{alg : OracleAlg spec}, we will write \lean{alg.exec oa} as shorthand for simulating \lean{oa} with the bundled oracle in \lean{alg}. 
+Given \lean{alg : OracleAlg spec}, we will write \lean{alg.exec oa} as shorthand for simulating \lean{oa} with the bundled oracle in \lean{alg}.
 This allows us to define the type of a cryptosystem in a way that is agnostic to the oracles that are available.
 
 As an example we define the type of a signature protocol as extending this structure with keygen, sign, and verify functions:
+% Can see that bundling s.p. in early makes definitions like this somewhat cluttered
+% On the other hand other things later on end up being simpler
 \begin{leancode}
-  structure SignatureAlg (M PK SK S : Type) extends OracleAlg spec where
-    keygen : Unit → OracleComp spec (PK × SK)
-    sign : PK → SK → M → OracleComp spec S
-    verify : PK → M → S → OracleComp spec Bool
+  structure SignatureAlg (M PK SK S : ℕ → Type) extends OracleAlg spec where
+    keygen (n : ℕ) : OracleComp (spec n) (PK n × SK n)
+    sign (n : ℕ) : PK n → SK n → M n → OracleComp (spec n) (S n)
+    verify (n : ℕ) : PK n → M n → S n → OracleComp (spec n) Bool
 \end{leancode}
 Any particular implementation is then required to specify how it intends the oracles to behave.
-We also use this to define a simple type to represent security games:
+We also use this to define a simple type to represent security games,
+  as containing a single field for the experiment (and the extra bundled oracles):
 \begin{leancode}
-  structure SecExp (α : Type) extends OracleAlg spec where
-    inpGen : OracleComp spec α
-    main : α → OracleComp spec Bool
+  structure SecExp {ι : Type} (spec : ℕ → OracleSpec ι)
+      extends OracleAlg spec where
+    main (n : ℕ) : OracleComp (spec n) Bool
 \end{leancode}
 The advantage of an experiment can be defined by using the bundled simulation oracle to execute the experiment:
 \begin{leancode}
-  def advantage (exp : SecExp spec α β) : ℝ≥0∞ :=
-    [= true | exp.exec (exp.inpGen >>= exp.main)]
+  def advantage (exp : SecExp spec α β) (n : ℕ) : ℝ≥0∞ :=
+    [= true | exp.exec n (exp.main n)]
+
+  def negligible_success (exp : SecExp spec α β) :=
+    negligible (λ n ↦ exp.advantage n)
 \end{leancode}
 
 As a simple example we have the following experiment for showing that a signing algorithm \lean{sigAlg} always verifies honest signatures:
 \begin{leancode}
   def soundnessExp (m : M) : SecExp spec (PK × SK) Bool where
-    inpGen := sigAlg.keygen ()
-    main := λ (pk, sk) ↦ do
+    main := do
+      let (pk, sk) ← sigAlg.keygen ()
       let σ ← sigAlg.sign pk sk m
       sigAlg.verify pk m σ
+    __ := sigAlg -- Auto-fill fields from signature alg
 \end{leancode}
 Soundness is then expressed by saying that:
 \begin{leancode}
   ∀ m : M, (soundnessExp sigAlg m).advantage = 1
 \end{leancode}
+% Can also use this for allowing small failure for message distributions
+% Need to also modify experiment to draw m from mDist rather than take m as input
+% \begin{leancode}
+%   ∀ mDist, negligible (1 - (soundnessExp sigAlg mDist).advantage)
+% \end{leancode}
 
 For more complicated security games we need a representation of an adversary, and so we define a type \lean{SecAdv spec α β} for an adversary that takes a value of type \lean{α} and computes an output of type \lean{β} using oracles in \lean{spec}.
 We also require that the adversary is polynomial time, and that we have an explicit bound on the number of queries they make.
@@ -259,22 +279,30 @@ The experiment succeeds if this signature is valid and the message was never que
 \begin{leancode}
   def unforgeableExp (adv : SecAdv (spec ++ M →ₒ S) PK (M × S)) :
       SecExp spec (PK × SK) where
-    inpGen := sigAlg.keygen ()
     main := λ (pk, sk) ↦ do
+      let (pk, sk) ← sigAlg.keygen ()
       let ((m, σ), log) ←
         simulate (sigAlg.signingOracle pk sk) (adv.run pk) (emptyLog spec)
       let b ← sigAlg.verify pk m σ
       return (b && !(log.wasQueried m))
+    __ := sigAlg
 \end{leancode}
 
 \subsection{Proving the security of Schnorr Signatures}
 \label{sec:schnorr}
-Recall that Schnorr signatures are defined over a cyclic group \lean{Γ} of order \lean{p}, and using a random oracle \lean{hash : M × Γ × Γ -> Fin(p)}. 
+% In the code now Schnorr stuff is all done as sigma protocols.
+% If I moved the sigma protocol stuff from later to this section, I could write this as "Forking Lemma" -> "Fiat-Shamir" -> Schnorr Sigma -> Schnorr signature
+% Having all of that would probably push up page counts (although some sigma protocol stuff could leave the other section)
+
+Recall that Schnorr signatures are defined over a cyclic group \lean{Γ} of order \lean{p}, and using a random oracle \lean{hash : M × Γ × Γ -> Fin(p)}.
 For generator \lean{G : Γ}, we generate a key pair by choosing \lean{x <- $[0..p]},  \lean{let P := x * G;} and \lean{return (P,x)}; to sign a message \lean{m : M}, we choose \lean{k <- $[0..p]}, and compute \lean{a := k * G}, set \lean{e := query hash (m,a,P)}, and \lean{s := e*x+k mod p} and return \lean{(s,e)}.
 Security follows from the argument that if an adversary \lean{fadv} can forge a signature \lean{(s,e)} on some message \lean{m} with noticeable advantage, then we can ``rewind'' \lean{fadv} to the point of its query \lean{hash (m,a,P)}, return a different value \lean{ee}, and obtain another valid signature \lean{(ss,ee)}, still with noticeable probability.
 Given these two valid signatures, we can compute the private key \lean{x := (ss - s) / (ee - e) mod p}, which corresponds to the discrete logarithm of the public key \lean{P}.
 
-In order to formalize this argument, prove a version of the ``forking lemma''~\cite{bellare2006multi} that states that if \lean{fadv} succceds with noticeable probability, then rewinding the computation also succeeds with noticeable probability. 
+% "This can also be modeled as F-S applied to some specific sigma protocol..."?
+% "Previous work has shown correctness of this sigma protocol (CITE), however doesn't implement a F-S to get the full signature"?
+% "The main obstacle is the need for a forking lemma..."?
+In order to formalize this argument, prove a version of the ``forking lemma''~\cite{bellare2006multi} that states that if \lean{fadv} succceds with noticeable probability, then rewinding the computation also succeeds with noticeable probability.
 We define a function \lean{fork} that randomly chooses a query index \lean{q}, and then constructs two \lean{seed} values that correspond to the results of all oracle queries when running \lean{fadv}, diverging after index \lean{q}; \lean{fork} runs \lean{fadv} on its input \lean{P} with both \lean{seed} values and aborts (returning \lean{none}) unless it obtains the required signatures.
 
 We then prove in Lean the forking lemma as the theorem
@@ -286,12 +314,17 @@ We then prove in Lean the forking lemma as the theorem
     let h : ℝ≥0∞ := Fintype.card (spec.range i) -- num. hash queries
     (acc / q) ^ 2 - 1 / h ≤ frk := _
 \end{leancode}
-The full proof can be found in our \vcvio repository\cite{vcvio-github}.  The proof draws on Mathlib~\cite{mathlib} machinery and consists of XXX lines of code.  (COMPARE TO PAPER VERSION)
 
-(FORK FIGURE)
+The full proof can be found in our \vcvio repository\cite{vcvio-github}.
+% Should LOC here include e.g. stuff about generating seed values? Correspondence between input seeds and output logs?
+% Depending on how you count could be from ~250 to ~1000
+The proof draws on Mathlib~\cite{mathlib} machinery and consists of XXX lines of code.  (COMPARE TO PAPER VERSION)
+
+(FORK FIGURE) % Is this a figure for the actual code?
 
 \subsection{Comparison}
 
 We note that prior frameworks do not have the expressive power necessary to express a proof of the forking lemma, but in some cases may provide better automation and usability.  
 As a point of comparison, Table~\ref{tab:thecomparisontable} includes the number of lines of code required for several example cryptographic security proofs in \vcvio as well as other state of the art frameworks.  (CITE CryptHOL, elaborate on results)
-
+% I still just have two fully complete reference impl for this table
+% Can work on getting at least one or two more now that F-S/sigma-protocol stuff is done
